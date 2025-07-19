@@ -1,0 +1,24 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+dash = "*"
+pandas = "*"
+openpyxl = "*"
+httpx = "*"
+rich = "*"
+dash-bootstrap-components = "*"
+dash-enterprise-auth = "*"
+dash-auth = "*"
+sqlalchemy = "*"
+toml = "*"
+
+[dev-packages]
+blue = "*"
+isort = "*"
+ruff = "*"
+
+[requires]
+python_version = "3.12"
