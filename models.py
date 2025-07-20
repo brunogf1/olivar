@@ -1,11 +1,9 @@
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-from visualizacao_de_dados.database import db
+from sqlalchemy import Column, Integer, String
 
 
 class Base(DeclarativeBase):
     pass
-
 
 class User(Base):
     __tablename__ = 'users'
@@ -14,4 +12,3 @@ class User(Base):
     password: Mapped[str]
 
 
-Base.metadata.create_all(db)

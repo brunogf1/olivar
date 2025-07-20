@@ -1,72 +1,33 @@
+import dash
 import dash_bootstrap_components as dbc
-from dash import Dash, dash_table, html
-import json
+from dash import dcc, html
 
-# Tenta carregar os dados do arquivo 'result.json'
-try:
-    with open('result.json', 'r') as f:
-        data = json.load(f)
-except Exception as e:
-    print("Erro ao carregar 'result.json':", e)
-    data = []
+from models import Base
+from database import engine
+from auth import layout_login, register_auth_callbacks
 
-app = Dash(
+Base.metadata.create_all(engine)  # Cria a tabela users se faltar
+
+app = dash.Dash(
+    __name__,
     external_stylesheets=[dbc.themes.CERULEAN],
-    #requests_pathname_prefix='/dashboard/',
+    suppress_callback_exceptions=True
 )
-
 server = app.server
-
-# Se data existe, monta a tabela. Se não, mostra mensagem amigável.
-layout_table = (
-    dash_table.DataTable(
-        data=data,
-        columns=[{'id': c, 'name': c} for c in data[0].keys()],
-        editable=False,
-        filter_action='native',
-        filter_options={'placeholder_text': 'Filtro...'},
-        sort_action='native',
-        sort_mode='multi',
-        row_deletable=False,
-        cell_selectable=False,
-        page_action='native',
-        page_size=50,
-        fixed_rows={'headers': True},
-        style_table={'overflowX': 'auto'},
-        style_as_list_view=True,
-        style_cell={
-            'padding': '5px',
-            'backgroundColor': '#fff',
-            'textAlign': 'center',
-            'minWidth': 150,
-            'maxWidth': 150,
-            'width': 150,
-            'overflow': 'hidden',
-            'textOverflow': 'ellipsis',
-        },
-        style_header={'fontWeight': 'bold'},
-        style_data_conditional=[
-            {'if': {'row_index': 'odd'}, 'backgroundColor': '#eee'},
-        ],
-    )
-    if data
-    else html.P("Não há dados para exibir ou o arquivo 'result.json' está vazio/inválido.", style={"color": "red", "fontWeight": "bold"})
-)
 
 app.layout = dbc.Container(
     [
+        dcc.Store(id='usuario-logado', storage_type='session'),
         dbc.Row([
-            html.H1(
-                'Análise de Estoque',
-                className='text-primary text-center fs-3 mt-3',
-            ),
-        ]),
-        html.Br(),
-        layout_table,
-        html.Hr(),
-    ],
-    fluid=True,
+            dbc.Col([
+                html.Div(id='area-login', children=layout_login()),
+                html.Div(id='area-dashboard', style={'display': 'none'}),
+            ], width=6)
+        ], justify="center")
+    ], fluid=True,
 )
+
+register_auth_callbacks(app)
 
 if __name__ == '__main__':
     app.run(debug=True, port=8050)
