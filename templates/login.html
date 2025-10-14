@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+  <!-- Limpa o flag por aba ao entrar na tela de login -->
+  <script>
+    try { sessionStorage.removeItem('auth_ok'); } catch(e) {}
+  </script>
+
+  <div class="login-container">
+    <div class="login-card">
+      <h2>Login Olivar</h2>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-wrap">
+            {% for cat, msg in messages %}
+              <div class="flash {{ cat }}">{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}">
+        <div class="form-row">
+          <label for="username">Usuário</label>
+          <input type="text" id="username" name="username" required autocomplete="username" />
+        </div>
+        <div class="form-row">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn-primary">Entrar</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

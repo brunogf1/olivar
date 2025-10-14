@@ -1,0 +1,74 @@
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: #f5f7fb;
+  margin: 0;
+}
+
+.container {
+  max-width: 95vw;              /* mais largo para caber mais colunas */
+  margin: 16px auto;
+  background: #fff;
+  padding: 14px 16px;
+  border-radius: 10px;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.06);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+h2 {
+  margin: 0;
+  color: #0d6efd;
+  font-weight: 600;
+}
+
+.userbox { display: flex; gap: 12px; align-items: center; }
+.btn-link { color: #0d6efd; text-decoration: none; }
+.btn-link:hover { text-decoration: underline; }
+
+.toolbar { margin: 8px 0; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+#export-btn {
+  background: #0d6efd; color: #fff; border: none;
+  padding: 8px 14px; border-radius: 6px; cursor: pointer;
+}
+#export-btn:hover { background: #0b5ed7; }
+
+.table-wrap { overflow-x: auto; }
+
+#tabela { width: 100% !important; }
+#tabela th, #tabela td {
+  white-space: nowrap;      /* não quebrar linha para caber mais colunas */
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+/* Login */
+.login-container {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: #f0f2f7; padding: 20px;
+}
+.login-card {
+  width: 100%; max-width: 380px; background: #fff; border-radius: 10px; padding: 20px;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.06);
+}
+.login-card h2 {
+  margin: 0 0 16px; color: #0d6efd; font-weight: 600;
+}
+.form-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
+.form-row input {
+  padding: 10px 12px; border: 1px solid #d7dbe4; border-radius: 6px; font-size: 14px;
+}
+.btn-primary {
+  width: 100%; background: #0d6efd; color: white; border: none; border-radius: 6px;
+  padding: 10px 12px; cursor: pointer;
+}
+.btn-primary:hover { background: #0b5ed7; }
+.flash-wrap { margin-bottom: 10px; }
+.flash { padding: 8px 10px; border-radius: 6px; font-size: 14px; }
+.flash.danger { background: #fdecea; color: #c92a2a; }
+.flash.success { background: #e6fcf5; color: #087f5b; }

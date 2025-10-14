@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <title>Redirecionando...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body>
+  <script>
+    // Marca esta aba como autenticada (flag por aba)
+    try { sessionStorage.setItem('auth_ok', '1'); } catch(e) {}
+    // Redireciona para a rota original
+    window.location.replace({{ next_url|tojson|safe }});
+  </script>
+</body>
+</html>
