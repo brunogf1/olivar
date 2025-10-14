@@ -1,0 +1,77 @@
+/* ---------- Base ---------- */
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: #f0f2f7;
+  margin: 0;
+  color: #212529;
+}
+
+/* ---------- Layout de login ---------- */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.06);
+}
+
+.login-card h2 {
+  margin: 0 0 16px;
+  color: #0d6efd;
+  font-weight: 600;
+}
+
+/* ---------- Formulário ---------- */
+.form-row {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-row label {
+  font-size: 14px;
+  color: #495057;
+}
+.form-row input {
+  padding: 10px 12px;
+  border: 1px solid #d7dbe4;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+.form-row input:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13,110,253,0.15);
+}
+
+/* ---------- Botão ---------- */
+.btn-primary {
+  width: 100%;
+  background: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 15px;
+}
+.btn-primary:hover { background: #0b5ed7; }
+
+/* ---------- Mensagens ---------- */
+.flash-wrap { margin-bottom: 10px; }
+.flash {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.flash.danger { background: #fdecea; color: #c92a2a; }
+.flash.success { background: #e6fcf5; color: #087f5b; }
