@@ -53,55 +53,55 @@ def get_main_data():
             [
                 int(d['almox15'])
                 for d in stock_data
-                if d['cod_item'] == item['cod_item']
-                and d['mascara'] == item['configuracao']
+                if d['cod_item'] == item['codigo_produto']
+                and d['mascara'] == item['mascara']
             ]
         )
         emp_1 = sum(
             int(d['almox5'])
             for d in stock_data
-            if d['cod_item'] == item['cod_item']
-            and d['mascara'] == item['configuracao']
+            if d['cod_item'] == item['codigo_produto']
+            and d['mascara'] == item['mascara']
         )
         emp_2 = sum(
             int(d['almoxtodos'])
             for d in stock_data
-            if d['cod_item'] == item['cod_item']
-            and d['mascara'] == item['configuracao']
+            if d['cod_item'] == item['codigo_produto']
+            and d['mascara'] == item['mascara']
         )
         general_stock = fat_stock + emp_1 + emp_2
         pdv_amount = sum(
             [
                 d['qtde']
                 for d in pdv_data
-                if d['cod_item'] == item['cod_item']
-                and d['mascara'] == item['configuracao']
+                if d['cod_item'] == item['codigo_produto']
+                and d['mascara'] == item['mascara']
             ]
         )
         order_amount = sum(
             [
                 d['qtde_pendente']
                 for d in order_data
-                if d['cod_item'] == item['cod_item']
-                and d['mascara'] == item['configuracao']
+                if d['cod_item'] == item['codigo_produto']
+                and d['mascara'] == item['mascara']
             ]
         )
         monthly_average = sum(
             [
                 d['media']
                 for d in nfs_data
-                if d['cod_item'] == item['cod_item']
-                and d['mascara'] == item['configuracao']
+                if d['cod_item'] == item['codigo_produto']
+                and d['mascara'] == item['mascara']
             ]
         )
         result.append(
             {
-                'COD EMP': item['cod_emp'],
-                'COD ITEM': item['cod_item'],
+                'COD EMP': item['codigo_empresa'],
+                'COD ITEM': item['codigo_produto'],
                 'DESC TECNICA': item['produto'],
-                'CONFIGURACAO': item['configuracao'],
-                'VOLUME': item['volume'],
-                'ID MASCARA': item['id_mascara'],
+                'CONFIGURACAO': item['mascara'],
+                'VOLUME': item['vol'],
+                'ID MASCARA': item['tmasc_item_id'],
                 'EM LINHA': item['em_linha'],
                 'QTDE PDV': pdv_amount,
                 'ESTOQUE FAT': fat_stock,
