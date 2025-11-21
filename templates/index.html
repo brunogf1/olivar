@@ -22,18 +22,16 @@
   <!-- SheetJS para exportar Excel no cliente -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
+  <!-- Navbar -->
+  {% include 'navbar.html' %}
+
   <div class="container">
     <div class="topbar">
       <h2>{{ page_title or 'Análise de Estoque' }}</h2>
-      {% if user %}
-      <div class="userbox">
-        <span>Olá, {{ user.username }}</span>
-        <a href="{{ url_for('logout') }}" class="btn-link">Sair</a>
-      </div>
-      {% endif %}
     </div>
 
     <div class="toolbar">
