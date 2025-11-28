@@ -1,0 +1,264 @@
+* { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+}
+
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: #f5f7fb;
+  color: #333;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  background: #fff;
+  padding: 20px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.header h1 {
+  font-size: 24px;
+  color: #0d6efd;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.header-info {
+  display: flex;
+  gap: 24px;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.info-value {
+  color: #0d6efd;
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-aberto {
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  background: #5c636a;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.card h2 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #0d6efd;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #d7dbe4;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s;
+  font-family: 'Courier New', monospace;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13,110,253,0.1);
+}
+
+.hint {
+  font-size: 12px;
+  color: #6c757d;
+  margin-top: 6px;
+}
+
+.table-container {
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  position: sticky;
+  top: 0;
+}
+
+th {
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  font-size: 13px;
+}
+
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #dee2e6;
+  font-size: 13px;
+}
+
+tbody tr:hover {
+  background: #f8f9fa;
+}
+
+tbody tr.last-scanned {
+  background: #d1e7dd;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  display: none;
+}
+
+.alert.show {
+  display: block;
+}
+
+.alert-danger {
+  background: #fdecea;
+  color: #c92a2a;
+  border: 1px solid #f5a5a5;
+}
+
+.alert-success {
+  background: #d1e7dd;
+  color: #0f5132;
+  border: 1px solid #badbcc;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+}
+
+.scan-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #198754;
+  margin-right: 8px;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.scan-status {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #198754;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.scan-status.active {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+  
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-info {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+}

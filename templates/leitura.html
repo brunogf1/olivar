@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <title>Leitura de Código de Barras</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/leitura.css') }}">
+</head>
+<body>
+  {% include 'navbar.html' %}
+
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Leitura de Código de Barras</h1>
+        <div class="header-info">
+          <div class="info-item">
+            <span class="info-label">Inventário:</span>
+            <span class="info-value">{{ inventario.nome }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Status:</span>
+            <span class="info-value status-badge status-aberto">{{ inventario.status.value }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Início:</span>
+            <span class="info-value">{{ inventario.data_inicio.strftime('%d/%m/%Y %H:%M') if inventario.data_inicio else '-' }}</span>
+          </div>
+        </div>
+      </div>
+      <a href="/inventarios" class="btn btn-secondary">← Voltar</a>
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <div class="content">
+      <div class="card">
+        <h2>Scanner de Código de Barras</h2>
+        
+        <div class="form-group">
+          <label for="barcodeInput">Código de Barras</label>
+          <input 
+            type="text" 
+            id="barcodeInput" 
+            placeholder="Aproxime o coletor aqui..." 
+            autofocus
+          />
+          <div class="scan-status" id="scanStatus">
+            <span class="scan-indicator"></span>
+            <span>Código lido com sucesso!</span>
+          </div>
+          <div class="hint">
+            O foco permanecerá neste campo automaticamente.
+          </div>
+        </div>
+        
+        </div>
+
+      <div class="card">
+        <h2> Itens Lidos</h2>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Descrição</th>
+                <th>Máscara</th>
+                <th>Qtd</th>
+                <th>Hora</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaItens">
+              <tr>
+                <td colspan="5">
+                  <div class="empty-state">
+                    <p>Nenhum item lido ainda</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/leitura.js') }}"></script>
+</body>
+</html>

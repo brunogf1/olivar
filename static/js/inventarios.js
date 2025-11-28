@@ -127,7 +127,6 @@ function renderizarTabela(inventarios) {
       <tr>
         <td colspan="5">
           <div class="empty-state">
-            <div class="empty-state-icon">📭</div>
             <h3>Nenhum inventário criado</h3>
             <p>Clique em "Novo Inventário" para começar</p>
           </div>
@@ -143,18 +142,13 @@ function renderizarTabela(inventarios) {
 
     if (inv.status === 'Aberto') {
       botoes = `
-        <a href="/inventarios/${inv.id}/leitura" class="btn btn-success">🔍 Abrir</a>
-        <button onclick="fecharInventario(${inv.id})" class="btn btn-warning">🔒 Fechar</button>
-        <button onclick="deletarInventario(${inv.id})" class="btn btn-danger">🗑️ Deletar</button>
-      `;
-    } else if (inv.status === 'Planejado') {
-      botoes = `
-        <button onclick="abrirInventario(${inv.id})" class="btn btn-success">▶️ Abrir</button>
-        <button onclick="deletarInventario(${inv.id})" class="btn btn-danger">🗑️ Deletar</button>
+        <a href="/inventarios/${inv.id}/leitura" class="btn btn-success">Abrir Leitura</a>
+        <button onclick="fecharInventario(${inv.id})" class="btn btn-warning">Fechar</button>
+        <button onclick="deletarInventario(${inv.id})" class="btn btn-danger">Deletar</button>
       `;
     } else {
       botoes = `
-        <button onclick="deletarInventario(${inv.id})" class="btn btn-danger">🗑️ Deletar</button>
+        <button onclick="deletarInventario(${inv.id})" class="btn btn-danger">Deletar</button>
       `;
     }
 
