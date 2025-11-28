@@ -3,56 +3,112 @@ import json
 from flask import (
     Flask, render_template, request, redirect, url_for, session, flash, jsonify
 )
-from sqlalchemy import text, Column, Integer, String, DateTime, Enum as SQLEnum
-from sqlalchemy.sql import func
+from sqlalchemy import text
 from database import Session
+from models import Inventario, ItemInventario, StatusInventario
 from werkzeug.security import check_password_hash
 from datetime import datetime
-import enum
+import requests
+from dotenv import load_dotenv
+from functools import lru_cache
+
+# Carrega variáveis de ambiente
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "troque-esta-secret-key")
+app.secret_key = os.getenv("SECRET_KEY", "dev-key-change-in-production")
 
-# Cookies de sessão "por sessão" (não persistem após fechar o navegador)
 app.config.update(
     SESSION_PERMANENT=False,
     SESSION_REFRESH_EACH_REQUEST=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=False,  # Em produção: True se usar HTTPS
+    SESSION_COOKIE_SECURE=False,
 )
 
-# ============ ENUM PARA STATUS ============
-class StatusInventario(enum.Enum):
-    ABERTO = "Aberto"
-    FECHADO = "Fechado"
+# ============ CONFIGURAÇÕES DE APIS ============
+API_CODIGO_BARRAS_URL = os.getenv("API_CODIGO_BARRAS_URL", "")
+API_ESTOQUE_URL = os.getenv("API_ESTOQUE_URL", "")
+API_TOKEN = os.getenv("API_TOKEN", "")
+API_ESTOQUE_CHAVE = os.getenv("API_ESTOQUE_CHAVE", "")
 
-# ============ MODELO DE INVENTÁRIO ============
-from sqlalchemy.orm import declarative_base
+# ============ FUNÇÕES AUXILIARES DE API (LIVE) ============
 
-Base = declarative_base()
+@lru_cache(maxsize=128)
+def consultar_codigo_api_individual(cod_barra_busca):
+    """
+    Busca APENAS o código de barras específico na API.
+    Retorna exatamente o que vier no campo 'qtde'.
+    """
+    if not cod_barra_busca:
+        return None
 
-class Inventario(Base):
-    __tablename__ = 'inventarios'
-    
-    id = Column(Integer, primary_key=True)
-    nome = Column(String(150), nullable=False)
-    data_inicio = Column(DateTime, nullable=True)
-    data_fim = Column(DateTime, nullable=True)
-    status = Column(SQLEnum(StatusInventario), default=StatusInventario.ABERTO)
-    criado_em = Column(DateTime, default=func.now())
-    
-    def to_dict(self):
+    try:
+        print(f"🔍 Buscando na API (Live) código: {cod_barra_busca}")
+        
+        headers = {
+            "Authorization": f"Bearer {API_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "Chave": API_ESTOQUE_CHAVE,
+            "Skip": 0,
+            "Take": 1, 
+            "Parameters": [ 
+                {
+                    "Column": "cod_barra_ord", 
+                    "Value": cod_barra_busca
+                }
+            ],
+            "Sorting": [
+                {
+                    "ByColumn": "cod_item",
+                    "Sort": "ASC"
+                }
+            ]
+        }
+        
+        response = requests.post(
+            API_CODIGO_BARRAS_URL,
+            headers=headers,
+            json=payload,
+            timeout=10
+        )
+        
+        if response.status_code != 200:
+            print(f"❌ Erro API: {response.status_code} - {response.text}")
+            return None
+            
+        dados_api = response.json()
+        
+        lista_itens = []
+        if isinstance(dados_api, list):
+            lista_itens = dados_api
+        elif isinstance(dados_api, dict):
+            if 'value' in dados_api: lista_itens = dados_api['value']
+            elif 'data' in dados_api: lista_itens = dados_api['data']
+            elif 'cod_item' in dados_api: lista_itens = [dados_api]
+        
+        if not lista_itens:
+            return None
+            
+        item = lista_itens[0]
+        
+        # Mapeamento ESTRITO do campo qtde
         return {
-            'id': self.id,
-            'nome': self.nome,
-            'data_inicio': self.data_inicio.strftime('%d/%m/%Y %H:%M') if self.data_inicio else '-',
-            'data_fim': self.data_fim.strftime('%d/%m/%Y %H:%M') if self.data_fim else '-',
-            'status': self.status.value,
-            'criado_em': self.criado_em.strftime('%d/%m/%Y %H:%M')
+            'cod_emp': item.get('cod_emp'),
+            'etiq_id': item.get('etiq_id'),
+            'cod_barra_ord': item.get('cod_barra_ord'),
+            'cod_item': item.get('cod_item'),
+            'desc_tecnica': item.get('desc_tecnica'),
+            'mascara': item.get('mascara'),
+            'tmasc_item_id': item.get('tmasc_item_id'),
+            'qtde': item.get('qtde') # Pode ser None
         }
 
-# Criar tabelas
-Base.metadata.create_all(Session().get_bind())
+    except Exception as e:
+        print(f"❌ Erro na requisição API: {e}")
+        return None
 
 # ============ DECORADOR DE AUTENTICAÇÃO ============
 def verify_password(stored_hash: str, provided_password: str) -> bool:
@@ -144,13 +200,11 @@ def index():
 @app.route("/inventarios", methods=["GET"])
 @login_required
 def inventarios():
-    """Página principal de inventários"""
     return render_template("inventarios.html", user=session.get("user"))
 
 @app.route("/api/inventarios", methods=["GET"])
 @login_required
 def get_inventarios():
-    """API: Retorna todos os inventários"""
     db = Session()
     try:
         inventarios_list = db.query(Inventario).order_by(Inventario.criado_em.desc()).all()
@@ -161,7 +215,6 @@ def get_inventarios():
 @app.route("/api/inventarios", methods=["POST"])
 @login_required
 def criar_inventario():
-    """API: Cria um novo inventário"""
     data = request.get_json()
     nome = data.get("nome", "").strip()
     
@@ -173,37 +226,14 @@ def criar_inventario():
         novo_inv = Inventario(
             nome=nome,
             status=StatusInventario.ABERTO,
-            data_inicio=None,
-            data_fim=None
+            data_inicio=datetime.now(),
+            data_fim=None,
+            criado_em=datetime.now()
         )
         db.add(novo_inv)
         db.commit()
+        db.refresh(novo_inv)
         return jsonify(novo_inv.to_dict()), 201
-    except Exception as e:
-        db.rollback()
-        return jsonify({"erro": str(e)}), 500
-    finally:
-        db.close()
-
-@app.route("/api/inventarios/<int:inv_id>/abrir", methods=["PUT"])
-@login_required
-def abrir_inventario(inv_id):
-    """API: Abre um inventário"""
-    db = Session()
-    try:
-        inventario = db.query(Inventario).filter_by(id=inv_id).first()
-        if not inventario:
-            return jsonify({"erro": "Inventário não encontrado"}), 404
-        
-        if inventario.status == StatusInventario.ABERTO:
-            return jsonify({"erro": "Inventário já está aberto"}), 400
-        
-        inventario.status = StatusInventario.ABERTO
-        if not inventario.data_inicio:
-            inventario.data_inicio = datetime.now()
-        
-        db.commit()
-        return jsonify(inventario.to_dict()), 200
     except Exception as e:
         db.rollback()
         return jsonify({"erro": str(e)}), 500
@@ -213,7 +243,6 @@ def abrir_inventario(inv_id):
 @app.route("/api/inventarios/<int:inv_id>/fechar", methods=["PUT"])
 @login_required
 def fechar_inventario(inv_id):
-    """API: Fecha um inventário"""
     db = Session()
     try:
         inventario = db.query(Inventario).filter_by(id=inv_id).first()
@@ -227,6 +256,7 @@ def fechar_inventario(inv_id):
         inventario.data_fim = datetime.now()
         
         db.commit()
+        db.refresh(inventario)
         return jsonify(inventario.to_dict()), 200
     except Exception as e:
         db.rollback()
@@ -237,7 +267,6 @@ def fechar_inventario(inv_id):
 @app.route("/api/inventarios/<int:inv_id>", methods=["DELETE"])
 @login_required
 def deletar_inventario(inv_id):
-    """API: Deleta um inventário"""
     db = Session()
     try:
         inventario = db.query(Inventario).filter_by(id=inv_id).first()
@@ -250,6 +279,197 @@ def deletar_inventario(inv_id):
     except Exception as e:
         db.rollback()
         return jsonify({"erro": str(e)}), 500
+    finally:
+        db.close()
+
+@app.route("/inventarios/<int:inv_id>/leitura", methods=["GET"])
+@login_required
+def leitura_codigos(inv_id):
+    db = Session()
+    try:
+        inventario = db.query(Inventario).filter_by(id=inv_id).first()
+        if not inventario:
+            return redirect(url_for("inventarios"))
+        
+        if inventario.status != StatusInventario.ABERTO:
+            flash("Este inventário não está aberto para leitura!", "danger")
+            return redirect(url_for("inventarios"))
+        
+        return render_template("leitura.html", inventario=inventario, user=session.get("user"))
+    finally:
+        db.close()
+
+# ============ ROTAS DE VALIDAÇÃO ============
+@app.route("/api/validar-codigo-barras", methods=["GET"])
+@login_required
+def validar_codigo_barras():
+    codigo = request.args.get('codigo', '').strip()
+    
+    if not codigo:
+        return jsonify({"erro": "Código não informado"}), 400
+    
+    try:
+        item = consultar_codigo_api_individual(codigo)
+        
+        if not item:
+            return jsonify({
+                "sucesso": False,
+                "erro": f"Código de barras '{codigo}' não encontrado na API"
+            }), 404
+
+        if item.get('qtde') is None:
+             return jsonify({
+                "sucesso": False,
+                "erro": f"Item encontrado, mas sem campo 'qtde' definido na API."
+            }), 422
+        
+        return jsonify({
+            "sucesso": True,
+            "dados": item
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "erro": "Erro ao validar código",
+            "detalhes": str(e)
+        }), 500
+
+# ============ ROTAS DE ITENS INVENTÁRIO ============
+@app.route("/api/inventarios/<int:inv_id>/itens", methods=["GET"])
+@login_required
+def get_itens_inventario(inv_id):
+    db = Session()
+    try:
+        inventario = db.query(Inventario).filter_by(id=inv_id).first()
+        if not inventario:
+            return jsonify({"erro": "Inventário não encontrado"}), 404
+        
+        itens = db.query(ItemInventario).filter_by(inventario_id=inv_id).order_by(
+            ItemInventario.timestamp.desc()
+        ).all()
+        
+        return jsonify([item.to_dict() for item in itens]), 200
+        
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        db.close()
+
+@app.route("/api/inventarios/<int:inv_id>/itens", methods=["POST"])
+@login_required
+def adicionar_item_inventario(inv_id):
+    """
+    Adiciona um item.
+    1. OBRIGATÓRIO TER 'qtde' NA API.
+    2. PROIBIDO DUPLICIDADE (Retorna erro se já existir).
+    """
+    data = request.get_json()
+    
+    db = Session()
+    try:
+        inventario = db.query(Inventario).filter_by(id=inv_id).first()
+        if not inventario:
+            return jsonify({"erro": "Inventário não encontrado"}), 404
+        
+        if inventario.status != StatusInventario.ABERTO:
+            return jsonify({"erro": "Inventário não está aberto"}), 400
+        
+        cod_barra = data.get('cod_barra_ord', '').strip()
+        
+        if not cod_barra:
+            return jsonify({"erro": "Código de barras não informado"}), 400
+        
+        # 1. Busca na API
+        item_api = consultar_codigo_api_individual(cod_barra)
+        
+        if not item_api:
+            # Tenta limpar cache e buscar de novo
+            consultar_codigo_api_individual.cache_clear()
+            item_api = consultar_codigo_api_individual(cod_barra)
+            
+            if not item_api:
+                return jsonify({"erro": "Código de barras não encontrado na API"}), 404
+
+        # 2. VALIDAÇÃO ESTRITA DE 'qtde'
+        raw_qtde = item_api.get('qtde')
+        
+        if raw_qtde is None:
+             return jsonify({
+                 "erro": "Campo 'qtde' não encontrado na API. Gravação bloqueada."
+             }), 422 
+        
+        try:
+            quantidade_real = float(raw_qtde)
+            if quantidade_real <= 0:
+                return jsonify({
+                    "erro": f"Quantidade inválida ({quantidade_real}). Item não será gravado."
+                }), 422
+        except (ValueError, TypeError):
+             return jsonify({
+                 "erro": f"Valor de 'qtde' inválido na API: {raw_qtde}"
+             }), 422
+
+        # 3. VERIFICAÇÃO DE DUPLICIDADE (BLOQUEIO TOTAL)
+        item_existente = db.query(ItemInventario).filter_by(
+            inventario_id=inv_id,
+            cod_barra_ord=cod_barra
+        ).first()
+        
+        if item_existente:
+            # BLOQUEIA: Item já lido. Não grava, não incrementa.
+            return jsonify({
+                "erro": f"ERRO: A etiqueta '{cod_barra}' JÁ FOI LIDA neste inventário."
+            }), 409 # Status 409 Conflict indica conflito de dados (duplicidade)
+
+        # 4. Se não existe, cria novo (único caminho possível)
+        novo_item = ItemInventario(
+            inventario_id=inv_id,
+            cod_barra_ord=item_api['cod_barra_ord'],
+            cod_item=item_api['cod_item'],
+            etiq_id=item_api['etiq_id'],
+            desc_tecnica=item_api['desc_tecnica'],
+            mascara=item_api['mascara'],
+            tmasc_item_id=item_api['tmasc_item_id'],
+            quantidade=quantidade_real,
+            timestamp=datetime.now()
+        )
+        db.add(novo_item)
+        db.commit()
+        db.refresh(novo_item)
+        return jsonify({
+            "sucesso": True,
+            "mensagem": "Item adicionado",
+            "dados": novo_item.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.rollback()
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        db.close()
+
+# ============ ROTAS DE ADMIN/STATUS ============
+@app.route("/api/admin/status", methods=["GET"])
+@login_required
+def api_admin_status():
+    db = Session()
+    try:
+        total_inventarios = db.query(Inventario).count()
+        total_itens_lidos = db.query(ItemInventario).count()
+        
+        info_cache = consultar_codigo_api_individual.cache_info()
+        
+        return jsonify({
+            "inventarios_criados": total_inventarios,
+            "itens_lidos_total": total_itens_lidos,
+            "modo": "LIVE API (Strict 'qtde' + No Duplicates)",
+            "cache_status": {
+                "hits": info_cache.hits,
+                "misses": info_cache.misses,
+                "capacidade_max": info_cache.maxsize
+            },
+            "status": "✅ Sistema operacional"
+        }), 200
     finally:
         db.close()
 
