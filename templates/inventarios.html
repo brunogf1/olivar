@@ -2,35 +2,29 @@
 <html lang="pt-br">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Gerenciador de Inventários</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/inventarios.css') }}">
 </head>
 <body>
-  <!-- Navbar -->
   {% include 'navbar.html' %}
 
   <div class="container">
-    <!-- Header -->
     <div class="header">
-      <h1>Gerenciador de Inventários</h1>
-      <button class="btn btn-primary" onclick="abrirModalCriar()">
-       Novo Inventário
-      </button>
+      <h1>Gerenciador</h1>
+      <button class="btn btn-primary" onclick="abrirModalCriar()">+ Novo</button>
     </div>
 
-    <!-- Alert -->
     <div id="alert" class="alert"></div>
 
-    <!-- Modal Novo Inventário -->
     <div id="modalCriar" class="modal">
       <div class="modal-content">
         <div class="modal-header">Novo Inventário</div>
         <div class="modal-body">
           <div class="form-group">
-            <label for="nomeInventario">Nome do Inventário</label>
-            <input type="text" id="nomeInventario" placeholder="Ex: Inventário Jan/2025" />
+            <label for="nomeInventario">Nome</label>
+            <input type="text" id="nomeInventario" placeholder="Ex: Inventário Jan/2025" autocomplete="off" />
           </div>
         </div>
         <div class="modal-footer">
@@ -40,26 +34,20 @@
       </div>
     </div>
 
-    <!-- Tabela de Inventários -->
     <div class="table-container">
       <table>
         <thead>
           <tr>
-            <th style="width: 25%;">Nome</th>
-            <th style="width: 18%;">Data Início</th>
-            <th style="width: 18%;">Data Fim</th>
-            <th style="width: 15%;">Status</th>
-            <th style="width: 24%;">Ações</th>
+            <th>Nome</th>
+            <th>Início</th>
+            <th>Fim</th>
+            <th>Status</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody id="tabelaInventarios">
           <tr>
-            <td colspan="5">
-              <div class="loading">
-                <div class="spinner"></div>
-                <p>Carregando inventários...</p>
-              </div>
-            </td>
+            <td colspan="5"><div class="loading"><div class="spinner"></div>Carregando...</div></td>
           </tr>
         </tbody>
       </table>

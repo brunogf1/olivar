@@ -2,8 +2,8 @@
 <html lang="pt-br">
 <head>
   <meta charset="utf-8" />
-  <title>Leitura de Código de Barras</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Leitura</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/leitura.css') }}">
 </head>
@@ -12,71 +12,41 @@
 
   <div class="container">
     <div class="header">
-      <div>
-        <h1>Leitura de Código de Barras</h1>
-        <div class="header-info">
-          <div class="info-item">
-            <span class="info-label">Inventário:</span>
-            <span class="info-value">{{ inventario.nome }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Status:</span>
-            <span class="info-value status-badge status-aberto">{{ inventario.status.value }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Início:</span>
-            <span class="info-value">{{ inventario.data_inicio.strftime('%d/%m/%Y %H:%M') if inventario.data_inicio else '-' }}</span>
-          </div>
+      <div class="header-left">
+        <h1>Leitura</h1>
+        <div class="badges">
+          <span class="badge-inv">{{ inventario.nome }}</span>
+          <span class="status-badge status-aberto">ABERTO</span>
         </div>
       </div>
-      <a href="/inventarios" class="btn btn-secondary">← Voltar</a>
+      <a href="/inventarios" class="btn btn-secondary">Voltar</a>
     </div>
 
     <div id="alert" class="alert"></div>
 
-    <div class="content">
-      <div class="card">
-        <h2>Scanner de Código de Barras</h2>
-        
+    <div class="content-grid">
+      <div class="card scan-card">
+        <h2>Scanner</h2>
         <div class="form-group">
-          <label for="barcodeInput">Código de Barras</label>
-          <input 
-            type="text" 
-            id="barcodeInput" 
-            placeholder="Aproxime o coletor aqui..." 
-            autofocus
-          />
-          <div class="scan-status" id="scanStatus">
-            <span class="scan-indicator"></span>
-            <span>Código lido com sucesso!</span>
-          </div>
-          <div class="hint">
-            O foco permanecerá neste campo automaticamente.
-          </div>
+          <input type="text" id="barcodeInput" placeholder="Leia um código de barras..." autofocus autocomplete="off" />
+          <div class="scan-status" id="scanStatus">✓ Sucesso</div>
         </div>
-        
-        </div>
+      </div>
 
-      <div class="card">
-        <h2> Itens Lidos</h2>
-        <div class="table-container">
+      <div class="card list-card">
+        <h2>Últimos Lidos</h2>
+        <div class="table-responsive">
           <table>
             <thead>
               <tr>
                 <th>Código</th>
-                <th>Descrição</th>
+                <th>Item</th>
                 <th>Máscara</th>
                 <th>Qtd</th>
-                <th>Hora</th>
-                </tr>
+              </tr>
             </thead>
             <tbody id="tabelaItens">
-              <tr>
-                <td colspan="5">
-                  <div class="empty-state">
-                    <p>Nenhum item lido ainda</p>
-                </td>
-              </tr>
+              <tr><td colspan="4" style="text-align:center">Nenhum item lido</td></tr>
             </tbody>
           </table>
         </div>
