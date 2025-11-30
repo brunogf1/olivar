@@ -27,6 +27,7 @@ body { font-family: system-ui, sans-serif; background: #f5f7fb; color: #333; }
 }
 .form-group input:focus { background: #fff; box-shadow: 0 0 0 4px rgba(13,110,253,0.2); outline: none; }
 
+/* === STATUS DE LEITURA (Abaixo do Input) === */
 .scan-status { 
   margin-top: 10px; 
   font-weight: bold; 
@@ -38,8 +39,9 @@ body { font-family: system-ui, sans-serif; background: #f5f7fb; color: #333; }
 .scan-status.active { opacity: 1; }
 
 /* Cores dinâmicas */
-.scan-status.success { color: #198754; } /* Verde */
-.scan-status.error { color: #dc3545; }   /* Vermelho */
+.scan-status.success { color: #198754; } /* Verde - Sucesso */
+.scan-status.error { color: #dc3545; }   /* Vermelho - Erro */
+.scan-status.warning { color: #fd7e14; } /* Laranja - Já lido (NOVO) */
 
 /* Tabela */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -49,9 +51,11 @@ th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
 
 @keyframes highlight { from { background: #b8e6c0; } to { background: #e8f5e9; } }
 
+/* Alertas do Topo */
 .alert { padding: 15px; margin-bottom: 15px; border-radius: 8px; display: none; font-weight: bold; }
 .alert-danger { background: #f8d7da; color: #842029; border: 1px solid #f5c6cb; }
 .alert-success { background: #d1e7dd; color: #0f5132; }
+.alert-warning { background: #fff3cd; color: #664d03; border: 1px solid #ffecb5; } /* Alerta Amarelo */
 
 /* === MOBILE / COLETOR === */
 @media (max-width: 768px) {
@@ -76,4 +80,3 @@ th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
   td[data-label="Descrição"] { grid-column: span 2; font-weight: bold; color: #333; }
   td[data-label="Qtd"] { font-size: 16px; color: #0d6efd; justify-self: end; }
 }
-
