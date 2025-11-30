@@ -35,10 +35,15 @@ function mostrarScanStatus(tipo) {
   
   if (tipo === 'success') {
     status.textContent = '✓ Sucesso';
-    status.classList.add('success'); // Verde (definido no CSS)
-  } else {
-    status.textContent = '✕ Código de barras inválido'; // Vermelho (definido no CSS)
-    status.classList.add('error');
+    status.classList.add('success'); // Verde
+  } 
+  else if (tipo === 'duplicate') {
+    status.textContent = '⚠ Código já lido!';
+    status.classList.add('warning'); // Laranja (NOVO)
+  }
+  else {
+    status.textContent = '✕ Código inválido'; 
+    status.classList.add('error');   // Vermelho
   }
 
   // Ativa a animação de opacidade
@@ -61,6 +66,7 @@ async function carregarItensSalvos() {
 
     const itens = await response.json();
     
+    // Apenas passamos a lista completa; o filtro de 3 itens ocorre no renderizarTabela
     if (itens.length === 0) {
       renderizarTabelaVazia();
       return;
@@ -99,27 +105,30 @@ async function adicionarItem() {
         throw new Error("Erro de comunicação com o servidor.");
     }
 
-    // 2. Validação de Erro da API (404, 500, etc)
+    // === TRATAMENTO DE RESPOSTAS ===
     if (!response.ok) {
-      // Feedback Visual: ERRO
-      mostrarScanStatus('error');
       
-      // Alerta com a mensagem específica do Python
-      mostrarAlert(resultado.erro || 'Erro desconhecido', 'danger');
-      
-      // Limpa e foca imediatamente
+      // CASO 1: Item Duplicado (Status 409 Conflict)
+      if (response.status === 409) {
+        mostrarScanStatus('duplicate'); // Mostra amarelo "Já lido"
+        mostrarAlert(resultado.erro, 'warning'); // Alerta amarelo no topo
+      } 
+      // CASO 2: Outros Erros (404 Não encontrado, 500 Erro server)
+      else {
+        mostrarScanStatus('error'); // Mostra vermelho "Inválido"
+        mostrarAlert(resultado.erro || 'Erro desconhecido', 'danger');
+      }
+
+      // Limpa e foca imediatamente para não travar a operação
       codigoInput.value = ''; 
       codigoInput.focus();
       return;
     }
 
-    // 3. Sucesso
+    // === SUCESSO ===
     mostrarScanStatus('success');
 
-    const msgSucesso = resultado.mensagem === 'Item incrementado' 
-        ? `+${resultado.dados.quantidade} somado! (Item repetido)`
-        : `Sucesso: ${resultado.dados.desc_tecnica}`;
-
+    const msgSucesso = `Sucesso: ${resultado.dados.desc_tecnica}`;
     mostrarAlert(msgSucesso, 'success');
 
     // Atualiza tabela
@@ -158,7 +167,11 @@ function renderizarTabela(itens) {
     return;
   }
 
-  tbody.innerHTML = itens.map(item => `
+  // === ALTERAÇÃO: Filtra apenas os 3 primeiros itens ===
+  // (Assumindo que a API já retorna ordenado por timestamp DESC)
+  const ultimos3 = itens.slice(0, 3);
+
+  tbody.innerHTML = ultimos3.map(item => `
     <tr class="last-scanned">
       <td data-label="Código"><code>${item.cod_barra_ord}</code></td>
       <td data-label="Descrição">${item.desc_tecnica || item.cod_item}</td>
