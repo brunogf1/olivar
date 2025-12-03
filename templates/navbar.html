@@ -15,7 +15,7 @@
         </a>
       </li>
       <li class="navbar-item">
-        <a href="/inventarios" class="navbar-link {% if request.path.startswith('/inventarios') %}active{% endif %}">
+        <a href="{{ url_for('inventarios') }}" class="navbar-link {% if request.path.startswith('/inventarios') %}active{% endif %}">
           Gerenciar Inventários
         </a>
       </li>

@@ -19,7 +19,7 @@ function mostrarAlert(mensagem, tipo = 'danger') {
 // ========== FUNÇÕES API ==========
 async function carregarInventarios() {
   try {
-    const response = await fetch('/api/inventarios');
+    const response = await fetch('/olivar/api/inventarios');
     const data = await response.json();
     renderizarTabela(data);
   } catch (err) {
@@ -35,7 +35,7 @@ async function criarInventario() {
   }
 
   try {
-    const response = await fetch('/api/inventarios', {
+    const response = await fetch('/olivar/api/inventarios', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nome })
@@ -59,7 +59,7 @@ async function fecharInventario(id) {
   if (!confirm('Tem certeza que deseja FECHAR este inventário?')) return;
 
   try {
-    const response = await fetch(`/api/inventarios/${id}/fechar`, {
+    const response = await fetch(`/olivar/api/inventarios/${id}/fechar`, {
       method: 'PUT'
     });
     const data = await response.json();
@@ -80,7 +80,7 @@ async function deletarInventario(id) {
   if (!confirm('Tem certeza que deseja DELETAR este inventário?')) return;
 
   try {
-    const response = await fetch(`/api/inventarios/${id}`, {
+    const response = await fetch(`/olivar/api/inventarios/${id}`, {
       method: 'DELETE'
     });
     const data = await response.json();
@@ -112,7 +112,7 @@ function renderizarTabela(inventarios) {
 
     if (inv.status === 'Aberto') {
       botoes = `
-        <a href="/inventarios/${inv.id}/leitura" class="btn btn-success">Abrir</a>
+        <a href="/olivar/inventarios/${inv.id}/leitura" class="btn btn-success">Abrir</a>
         <button onclick="fecharInventario(${inv.id})" class="btn btn-warning">Fechar</button>
         <button onclick="deletarInventario(${inv.id})" class="btn btn-danger">Excluir</button>
       `;
