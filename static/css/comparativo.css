@@ -1,0 +1,81 @@
+/* Ajustes para alinhar botões no header igual ao inventarios.css */
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Cards de Estatísticas (Estilo Clean) */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin-top: 5px;
+}
+
+/* Filtros (Estilo Inputs do Inventário) */
+.filter-bar {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.filter-bar input, .filter-bar select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+}
+.filter-bar input { flex: 1; }
+
+/* Cores de Diferença */
+.text-danger { color: #dc3545 !important; }
+.text-success { color: #198754 !important; }
+.text-warning { color: #ffc107 !important; }
+.text-primary { color: #0d6efd !important; }
+
+/* Destaque na tabela para linhas com erro */
+.row-divergente {
+    background-color: #fff5f5; /* Fundo levemente avermelhado */
+}
+
+/* Ajustes de Texto */
+.text-center { text-align: center; }
+.mascara-info { font-size: 0.85em; color: #888; display: block; margin-bottom: 2px; }
+.desc-info { font-weight: 500; }
+
+/* Responsivo Mobile */
+@media (max-width: 768px) {
+    .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .header-actions { width: 100%; justify-content: space-between; }
+    .header-actions .btn { flex: 1; }
+    
+    .filter-bar { flex-direction: column; }
+    
+    /* Ajuste da tabela mobile herdada */
+    td { justify-content: space-between; text-align: right; }
+}

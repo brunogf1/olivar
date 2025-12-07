@@ -65,3 +65,14 @@ class ItemInventario(Base):
             'quantidade': self.quantidade,
             'timestamp': self.timestamp.strftime('%d/%m/%Y %H:%M:%S') if self.timestamp else '-'
         }
+
+class EstoqueInventario(Base):
+    __tablename__ = 'estoque_inventario'
+    
+    id = Column(Integer, primary_key=True)
+    cod_emp = Column(Integer, nullable=True)
+    cod_item = Column(String(50), nullable=False, index=True)
+    mascara = Column(String(200), nullable=True)
+    id_mascara = Column(Integer, nullable=False, index=True)
+    qtd_almox15 = Column(Integer, nullable=True) # Campo vindo da API
+    desc_tecnica = Column(String(300), nullable=True)

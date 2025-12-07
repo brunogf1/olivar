@@ -3,10 +3,10 @@ import json
 from flask import (
     Flask, render_template, request, redirect, url_for, session, flash, jsonify
 )
-from sqlalchemy import text
+from sqlalchemy import text, func
 from database import Session
 # IMPORTANTE: Apenas as tabelas que existem
-from models import Inventario, ItemInventario, StatusInventario
+from models import Inventario, ItemInventario, StatusInventario, EstoqueInventario
 from werkzeug.security import check_password_hash
 from datetime import datetime
 import requests
@@ -30,9 +30,10 @@ app.config.update(
 
 # ============ LOG DE INICIALIZAÇÃO ============
 print("="*60)
-print("🚀 INICIANDO OLIVAR (CORREÇÃO INDEX)")
+print("🚀 INICIANDO OLIVAR (COMPARATIVO: COD + MASCARA)")
 print(f"📂 Diretório: {basedir}")
 print(f"🔗 API BARRAS: {os.getenv('API_CODIGO_BARRAS_URL')}")
+print(f"🔗 API ESTOQUE: {os.getenv('API_ESTOQUE_URL')}")
 print("="*60)
 
 # ============ CONFIGURAÇÕES DE APIS ============
@@ -149,12 +150,9 @@ def logout():
     session.pop("user", None)
     return redirect(url_for("login"))
 
-# === CORREÇÃO DA ROTA INDEX ===
 @app.route("/")
 @login_required
 def index():
-    # Tenta carregar o result.json se existir, senão manda vazio
-    # Isso evita o Erro 500 se o index.html esperar variáveis
     data = []
     columns = []
     try:
@@ -328,6 +326,165 @@ def validar_codigo_barras():
         return jsonify({"sucesso": True, "dados": item}), 200
     except Exception as e:
         return jsonify({"erro": "Erro interno", "detalhes": str(e)}), 500
+
+# ============ ROTAS DE COMPARATIVO ============
+
+@app.route("/inventarios/<int:inv_id>/comparativo", methods=["GET"])
+@login_required
+def comparativo_page(inv_id):
+    db = Session()
+    try:
+        inv = db.query(Inventario).filter_by(id=inv_id).first()
+        if not inv:
+            flash("Inventário não encontrado", "danger")
+            return redirect(url_for("inventarios"))
+        return render_template("comparativo.html", inventario=inv, user=session.get("user"))
+    finally:
+        db.close()
+
+@app.route("/api/estoque/sincronizar", methods=["POST"])
+@login_required
+def sincronizar_estoque_api():
+    """
+    Consome API Externa (GET) e popula a tabela EstoqueInventario.
+    Limpa a tabela antes de inserir.
+    """
+    db = Session()
+    try:
+        if not API_ESTOQUE_URL:
+            return jsonify({"erro": "URL da API de Estoque não configurada no .env"}), 500
+
+        print(f"🔄 [SYNC] Iniciando sincronização com {API_ESTOQUE_URL}")
+
+        headers = {
+            "Authorization": f"Bearer {API_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        # Parâmetros GET conforme solicitado
+        params = {"Chave": API_ESTOQUE_CHAVE}
+
+        response = requests.get(API_ESTOQUE_URL, headers=headers, params=params, timeout=30)
+        
+        if response.status_code != 200:
+            return jsonify({"erro": f"Erro API Externa: {response.status_code} - {response.text}"}), 502
+
+        dados_retorno = response.json()
+        
+        # Normalização dos dados
+        lista_estoque = []
+        if isinstance(dados_retorno, list):
+            lista_estoque = dados_retorno
+        elif isinstance(dados_retorno, dict):
+             if 'value' in dados_retorno: lista_estoque = dados_retorno['value']
+             elif 'data' in dados_retorno: lista_estoque = dados_retorno['data']
+
+        if not lista_estoque:
+             return jsonify({"mensagem": "API retornou lista vazia. Estoque não atualizado."}), 200
+
+        # Transação: Limpar tabela e Inserir novos
+        db.query(EstoqueInventario).delete()
+        
+        novos_registros = []
+        for item in lista_estoque:
+            if not item.get('cod_item'): continue
+            
+            q_almox = item.get('almox15')
+            if q_almox is None:
+                 q_almox = item.get('qtde') or 0
+            
+            novo = EstoqueInventario(
+                cod_emp=item.get('cod_emp'),
+                cod_item=str(item.get('cod_item')).strip(),
+                mascara=item.get('mascara'),
+                id_mascara=int(item.get('id_mascara') or 0), 
+                qtd_almox15=int(float(q_almox)), 
+                desc_tecnica=item.get('desc_tecnica')
+            )
+            novos_registros.append(novo)
+
+        db.add_all(novos_registros)
+        db.commit()
+        
+        qtd_total = len(novos_registros)
+        print(f"✅ [SYNC] Sucesso! {qtd_total} itens atualizados.")
+        return jsonify({"sucesso": True, "mensagem": f"{qtd_total} itens sincronizados com sucesso."}), 200
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ [SYNC] Erro: {e}")
+        return jsonify({"erro": f"Exceção interna: {str(e)}"}), 500
+    finally:
+        db.close()
+
+@app.route("/api/inventarios/<int:inv_id>/comparativo", methods=["GET"])
+@login_required
+def get_dados_comparativo(inv_id):
+    """
+    Retorna JSON comparativo.
+    FILTRO: Apenas itens lidos.
+    CHAVE: (cod_item + mascara)
+    """
+    db = Session()
+    try:
+        itens_lidos = db.query(
+            ItemInventario.cod_item,
+            ItemInventario.tmasc_item_id,
+            func.max(ItemInventario.desc_tecnica).label('descricao'),
+            func.sum(ItemInventario.quantidade).label('total')
+        ).filter_by(inventario_id=inv_id).group_by(ItemInventario.cod_item, ItemInventario.tmasc_item_id).all()
+
+        dict_lidos = {
+            (item.cod_item, item.tmasc_item_id): {'qtd': item.total, 'desc': item.descricao} 
+            for item in itens_lidos
+        }
+
+        estoque_sistema = db.query(EstoqueInventario).all()
+        
+        dict_sistema = {
+            (e.cod_item, e.id_mascara): {'qtd': e.qtd_almox15, 'desc': e.desc_tecnica, 'mascara': e.mascara}
+            for e in estoque_sistema
+        }
+
+        chaves_lidas = set(dict_lidos.keys())
+        
+        resultado = []
+        for chave in chaves_lidas:
+            cod_item_atual = chave[0]
+
+            dados_lido = dict_lidos.get(chave)
+            
+            dados_sis = dict_sistema.get(chave, {'qtd': 0, 'desc': '', 'mascara': ''})
+
+            qtd_lida = float(dados_lido['qtd'])
+            qtd_sistema = float(dados_sis['qtd'])
+            
+            descricao = dados_sis['desc'] if dados_sis['desc'] else dados_lido['desc']
+            mascara = dados_sis['mascara']
+
+            diferenca = qtd_lida - qtd_sistema
+            
+            if diferenca == 0: status = "ok"
+            elif diferenca < 0: status = "falta"
+            else: status = "sobra"
+
+            resultado.append({
+                "cod_item": cod_item_atual,
+                "mascara": mascara,
+                "descricao": descricao,
+                "qtd_lida": qtd_lida,
+                "qtd_sistema": qtd_sistema,
+                "diferenca": diferenca,
+                "status": status
+            })
+
+        resultado.sort(key=lambda x: (x['diferenca'] == 0, x['cod_item']))
+
+        return jsonify(resultado), 200
+
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        db.close()
 
 @app.route("/api/admin/status", methods=["GET"])
 @login_required
