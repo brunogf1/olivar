@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Comparativo - {{ inventario.nome }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/inventarios.css') }}"> 
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/comparativo.css') }}">
+</head>
+<body>
+  {% include 'navbar.html' %}
+
+  <div class="container">
+    <div class="header">
+      <div class="header-title">
+        <h1>{{ inventario.nome }} <small style="font-size: 0.6em; color: #666;">(Comparativo)</small></h1>
+      </div>
+      <div class="header-actions">
+        <a href="{{ url_for('inventarios') }}" class="btn btn-secondary">Voltar</a>
+        
+        {% if inventario.status.value == 'Fechado' %}
+        <button class="btn btn-warning" onclick="sincronizarEstoque()" id="btnSync">
+            🔄 Sincronizar Estoque
+        </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <span class="stat-label">Total Itens</span>
+            <span class="stat-value" id="totalItens">0</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Divergentes</span>
+            <span class="stat-value text-danger" id="totalDivergente">0</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Corretos</span>
+            <span class="stat-value text-success" id="totalCorreto">0</span>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <input type="text" id="searchInput" placeholder="Filtrar por código ou descrição..." onkeyup="filtrarTabela()">
+        <select id="filterStatus" onchange="filtrarTabela()">
+            <option value="todos">Todos os Status</option>
+            <option value="divergente">Apenas Divergentes</option>
+            <option value="ok">Apenas Corretos</option>
+        </select>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Descrição</th>
+            <th class="text-center">Qtd. Estoque</th>
+            <th class="text-center">Qtd. Lida</th>
+            <th class="text-center">Diferença</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyComparativo">
+          <tr>
+            <td colspan="5"><div class="loading">Carregando dados...</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>const INVENTARIO_ID = {{ inventario.id }};</script>
+  <script src="{{ url_for('static', filename='js/comparativo.js') }}"></script>
+</body>
+</html>

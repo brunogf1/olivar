@@ -117,13 +117,12 @@ function renderizarTabela(inventarios) {
         <button onclick="deletarInventario(${inv.id})" class="btn btn-danger">Excluir</button>
       `;
     } else {
-      // ALTERADO: Removido o botão de Comparar. Agora só aparece Excluir.
       botoes = `
+        <a href="/inventarios/${inv.id}/comparativo" class="btn btn-info">Comparativo</a>
         <button onclick="deletarInventario(${inv.id})" class="btn btn-danger">Excluir</button>
       `;
     }
 
-    // Mantido o data-label para responsividade
     return `
       <tr>
         <td data-label="Nome"><strong>${inv.nome}</strong></td>
