@@ -1,26 +1,72 @@
 // ========== ESTADO GLOBAL ==========
-const inventarioId = window.location.pathname.split('/')[2];
+const inventarioId = window.location.pathname.split('/')[3];
+let alertTimeout = null; // Para controlar o tempo do alerta no topo
 
 // ========== FUNÇÕES UTILITÁRIAS ==========
+
+// 1. Alerta no Topo da Tela
 function mostrarAlert(mensagem, tipo = 'danger') {
   const alert = document.getElementById('alert');
+  
+  // Reinicia timer se já houver um alerta (para não sumir rápido demais)
+  if (alertTimeout) clearTimeout(alertTimeout);
+
   alert.textContent = mensagem;
-  alert.className = `alert show alert-${tipo}`;
-  setTimeout(() => alert.classList.remove('show'), 3000);
+  alert.className = 'alert'; // Limpa classes anteriores
+  alert.classList.add(`alert-${tipo}`);
+  
+  // Força repintura para garantir animação
+  requestAnimationFrame(() => {
+    alert.classList.add('show');
+  });
+
+  // Esconde após 4 segundos
+  alertTimeout = setTimeout(() => {
+    alert.classList.remove('show');
+  }, 4000);
 }
 
-function mostrarScanStatus() {
+// 2. Feedback Visual abaixo do Input (ScanStatus)
+function mostrarScanStatus(tipo) {
   const status = document.getElementById('scanStatus');
-  status.classList.add('active');
-  setTimeout(() => status.classList.remove('active'), 1500);
+  
+  // Reseta classes para garantir a cor certa
+  status.className = 'scan-status';
+  
+  if (tipo === 'success') {
+    status.textContent = '✓ Sucesso';
+    status.classList.add('success'); // Verde
+  } 
+  else if (tipo === 'duplicate') {
+    status.textContent = '⚠ Código já lido!';
+    status.classList.add('warning'); // Laranja (NOVO)
+  }
+  else {
+    status.textContent = '✕ Código inválido'; 
+    status.classList.add('error');   // Vermelho
+  }
+
+  // Ativa a animação de opacidade
+  requestAnimationFrame(() => {
+    status.classList.add('active');
+  });
+
+  // Esconde após 1.5 segundos
+  setTimeout(() => {
+    status.classList.remove('active');
+  }, 1500);
 }
 
 // ========== CARREGAR ITENS SALVOS ==========
 async function carregarItensSalvos() {
   try {
     const response = await fetch(`/olivar/api/inventarios/${inventarioId}/itens`);
+    
+    if (!response.ok) throw new Error("Falha ao buscar itens");
+
     const itens = await response.json();
     
+    // Apenas passamos a lista completa; o filtro de 3 itens ocorre no renderizarTabela
     if (itens.length === 0) {
       renderizarTabelaVazia();
       return;
@@ -28,86 +74,86 @@ async function carregarItensSalvos() {
     
     renderizarTabela(itens);
   } catch (err) {
-    mostrarAlert('Erro ao carregar itens: ' + err.message);
+    console.error(err); // Log silencioso ao carregar para não poluir a tela inicial
   }
 }
 
-// ========== ADICIONAR ITEM (QUANTIDADE AUTOMÁTICA DA API) ==========
+// ========== ADICIONAR ITEM (Lógica Principal) ==========
 async function adicionarItem() {
   const codigoInput = document.getElementById('barcodeInput');
   const codigo = codigoInput.value.trim();
 
+  // 1. Validação local: Campo vazio
   if (!codigo) {
-    mostrarAlert('Leia um código de barras válido');
+    mostrarScanStatus('error');
+    mostrarAlert('Leia um código de barras válido', 'warning');
     codigoInput.focus();
     return;
   }
 
-  // 1. Valida código na API
-  try {
-    const response = await fetch(`/olivar/api/validar-codigo-barras?codigo=${encodeURIComponent(codigo)}`);
-    
-    if (!response.ok) {
-      mostrarAlert(` Código "${codigo}" não encontrado no catálogo`, 'danger');
-      codigoInput.value = '';
-      codigoInput.focus();
-      return;
-    }
-
-    // Não precisamos fazer nada com o JSON aqui, pois o backend vai revalidar e pegar a qtd
-    await response.json();
-    
-  } catch (err) {
-    mostrarAlert('Erro ao validar código: ' + err.message);
-    return;
-  }
-
-  // 2. Adiciona ao inventário (Backend decide a quantidade)
   try {
     const response = await fetch(`/olivar/api/inventarios/${inventarioId}/itens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cod_barra_ord: codigo
-        // Quantidade removida daqui. O backend pega da API externa.
-      })
+      body: JSON.stringify({ cod_barra_ord: codigo })
     });
 
-    const resultado = await response.json();
+    let resultado;
+    try {
+        resultado = await response.json();
+    } catch (e) {
+        throw new Error("Erro de comunicação com o servidor.");
+    }
 
+    // === TRATAMENTO DE RESPOSTAS ===
     if (!response.ok) {
-      mostrarAlert(resultado.erro || 'Erro ao adicionar item');
+      
+      // CASO 1: Item Duplicado (Status 409 Conflict)
+      if (response.status === 409) {
+        mostrarScanStatus('duplicate'); // Mostra amarelo "Já lido"
+        mostrarAlert(resultado.erro, 'warning'); // Alerta amarelo no topo
+      } 
+      // CASO 2: Outros Erros (404 Não encontrado, 500 Erro server)
+      else {
+        mostrarScanStatus('error'); // Mostra vermelho "Inválido"
+        mostrarAlert(resultado.erro || 'Erro desconhecido', 'danger');
+      }
+
+      // Limpa e foca imediatamente para não travar a operação
+      codigoInput.value = ''; 
       codigoInput.focus();
       return;
     }
 
-    mostrarAlert(
-      resultado.mensagem === 'Item incrementado' 
-        ? ` Quantidade incrementada (Qtd Etiqueta: ${resultado.dados.quantidade})`
-        : ` ${resultado.dados.desc_tecnica} adicionado`,
-      'success'
-    );
+    // === SUCESSO ===
+    mostrarScanStatus('success');
 
+    const msgSucesso = `Sucesso: ${resultado.dados.desc_tecnica}`;
+    mostrarAlert(msgSucesso, 'success');
+
+    // Atualiza tabela
     carregarItensSalvos();
-    mostrarScanStatus();
-
-    // Limpa input
+    
+    // Limpa e foca para o próximo
     codigoInput.value = '';
     codigoInput.focus();
 
   } catch (err) {
-    mostrarAlert('Erro ao salvar item: ' + err.message);
+    // Erro de Rede/Fetch
+    mostrarScanStatus('error');
+    mostrarAlert('Erro: ' + err.message, 'danger');
+    codigoInput.value = '';
+    codigoInput.focus();
   }
 }
 
-// ========== RENDERIZAÇÃO ==========
+// ========== RENDERIZAÇÃO DA TABELA ==========
 function renderizarTabelaVazia() {
   const tbody = document.getElementById('tabelaItens');
   tbody.innerHTML = `
     <tr>
-      <td colspan="5">
-        <div class="empty-state">
-          <p>Nenhum item lido ainda</p>
+      <td colspan="4" style="text-align: center; padding: 20px; color: #6c757d;">
+        Nenhum item lido ainda
       </td>
     </tr>
   `;
@@ -116,39 +162,50 @@ function renderizarTabelaVazia() {
 function renderizarTabela(itens) {
   const tbody = document.getElementById('tabelaItens');
   
-  if (itens.length === 0) {
+  if (!itens || itens.length === 0) {
     renderizarTabelaVazia();
     return;
   }
 
-  tbody.innerHTML = itens.map(item => `
+  // === ALTERAÇÃO: Filtra apenas os 3 primeiros itens ===
+  // (Assumindo que a API já retorna ordenado por timestamp DESC)
+  const ultimos3 = itens.slice(0, 3);
+
+  tbody.innerHTML = ultimos3.map(item => `
     <tr class="last-scanned">
-      <td><code>${item.cod_barra_ord}</code></td>
-      <td>${item.desc_tecnica}</td>
-      <td>${item.mascara}</td>
-      <td><strong>${item.quantidade}</strong></td>
-      <td>${item.timestamp}</td>
+      <td data-label="Código"><code>${item.cod_barra_ord}</code></td>
+      <td data-label="Descrição">${item.desc_tecnica || item.cod_item}</td>
+      <td data-label="Máscara">${item.mascara}</td>
+      <td data-label="Qtd"><strong>${item.quantidade}</strong></td>
     </tr>
   `).join('');
 }
 
 // ========== EVENT LISTENERS ==========
+
+// Enviar ao pressionar Enter
 document.getElementById('barcodeInput').addEventListener('keypress', (e) => {
   if (e.key === 'Enter') {
+    e.preventDefault();
     adicionarItem();
   }
 });
 
-// Manter foco no campo de código de barras
+// Manter foco no input (Trap Focus para Coletores)
 document.addEventListener('click', (e) => {
-  if (e.target.tagName === 'INPUT') {
-    return;
+  const tag = e.target.tagName;
+  // Só devolve o foco se não clicou em algo interativo
+  if (tag !== 'BUTTON' && tag !== 'A' && tag !== 'INPUT') {
+    document.getElementById('barcodeInput').focus();
   }
-  document.getElementById('barcodeInput').focus();
 });
 
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', () => {
   carregarItensSalvos();
-  document.getElementById('barcodeInput').focus();
+  
+  // Pequeno delay para garantir foco no Android após renderizar
+  setTimeout(() => {
+      document.getElementById('barcodeInput').focus();
+  }, 500);
 });

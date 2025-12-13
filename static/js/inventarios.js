@@ -118,7 +118,7 @@ function renderizarTabela(inventarios) {
       `;
     } else {
       botoes = `
-        <a href="/inventarios/${inv.id}/comparativo" class="btn btn-info">Comparativo</a>
+        <a href="/olivar/inventarios/${inv.id}/comparativo" class="btn btn-info">Comparativo</a>
         <button onclick="deletarInventario(${inv.id})" class="btn btn-danger">Excluir</button>
       `;
     }

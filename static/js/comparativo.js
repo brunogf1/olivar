@@ -25,7 +25,7 @@ async function sincronizarEstoque() {
     btn.innerHTML = '⏳ Sincronizando...';
 
     try {
-        const response = await fetch('/api/estoque/sincronizar', { method: 'POST' });
+        const response = await fetch('/olivar/api/estoque/sincronizar', { method: 'POST' });
         const data = await response.json();
 
         if (response.ok) {
@@ -47,7 +47,7 @@ async function carregarComparativo() {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Carregando dados...</td></tr>';
 
     try {
-        const response = await fetch(`/api/inventarios/${INVENTARIO_ID}/comparativo`);
+        const response = await fetch(`/olivar/api/inventarios/${INVENTARIO_ID}/comparativo`);
         const data = await response.json();
         
         if (!response.ok) throw new Error(data.erro || "Erro ao carregar");
