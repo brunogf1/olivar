@@ -1,10 +1,12 @@
+// ========== CONFIGURAÇÃO DE ROTA (FIX VPS) ==========
+const BASE_URL = window.location.pathname.substring(0, window.location.pathname.indexOf('/inventarios'));
+
 let dadosOriginais = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     carregarComparativo();
 });
 
-// Reutilizando a lógica de alerta se possível, ou recriando simples
 function mostrarAlert(mensagem, tipo = 'danger') {
     const alert = document.getElementById('alert');
     if(alert) {
@@ -16,6 +18,11 @@ function mostrarAlert(mensagem, tipo = 'danger') {
     }
 }
 
+// === FUNÇÃO DE EXPORTAÇÃO ===
+function exportarExcel() {
+    window.location.href = `${BASE_URL}/api/inventarios/${INVENTARIO_ID}/comparativo/exportar`;
+}
+
 async function sincronizarEstoque() {
     const btn = document.getElementById('btnSync');
     if(!confirm("Atenção: Isso irá apagar os dados locais de estoque e baixar novamente da API.\nDeseja continuar?")) return;
@@ -25,12 +32,12 @@ async function sincronizarEstoque() {
     btn.innerHTML = '⏳ Sincronizando...';
 
     try {
-        const response = await fetch('/olivar/api/estoque/sincronizar', { method: 'POST' });
+        const response = await fetch(`${BASE_URL}/api/estoque/sincronizar`, { method: 'POST' });
         const data = await response.json();
 
         if (response.ok) {
             mostrarAlert(data.mensagem, 'success');
-            carregarComparativo(); // Recarrega a tabela
+            carregarComparativo(); 
         } else {
             mostrarAlert(data.erro || 'Erro ao sincronizar', 'danger');
         }
@@ -44,10 +51,10 @@ async function sincronizarEstoque() {
 
 async function carregarComparativo() {
     const tbody = document.getElementById('tbodyComparativo');
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Carregando dados...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">Carregando dados...</td></tr>';
 
     try {
-        const response = await fetch(`/olivar/api/inventarios/${INVENTARIO_ID}/comparativo`);
+        const response = await fetch(`${BASE_URL}/api/inventarios/${INVENTARIO_ID}/comparativo`);
         const data = await response.json();
         
         if (!response.ok) throw new Error(data.erro || "Erro ao carregar");
@@ -57,7 +64,7 @@ async function carregarComparativo() {
         atualizarResumo(dadosOriginais);
 
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Erro: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">Erro: ${err.message}</td></tr>`;
     }
 }
 
@@ -65,7 +72,7 @@ function renderizarTabela(dados) {
     const tbody = document.getElementById('tbodyComparativo');
     
     if (dados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhum item encontrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Nenhum item encontrado.</td></tr>`;
         return;
     }
 
@@ -78,10 +85,14 @@ function renderizarTabela(dados) {
         return `
             <tr class="${rowClass}">
                 <td data-label="Código"><strong>${item.cod_item}</strong></td>
+                
                 <td data-label="Descrição">
-                    <span class="mascara-info">${item.mascara || ''}</span>
                     <span class="desc-info">${item.descricao || 'Sem descrição'}</span>
                 </td>
+
+                <td data-label="ID Máscara">${item.id_mascara || '0'}</td>
+                <td data-label="Máscara"><small>${item.mascara || '-'}</small></td>
+                
                 <td data-label="Sistema" class="text-center">${item.qtd_sistema}</td>
                 <td data-label="Lido" class="text-center"><strong>${item.qtd_lida}</strong></td>
                 <td data-label="Diferença" class="text-center ${colorClass}">

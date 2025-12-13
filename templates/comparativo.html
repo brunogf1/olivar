@@ -19,9 +19,13 @@
       <div class="header-actions">
         <a href="{{ url_for('inventarios') }}" class="btn btn-secondary">Voltar</a>
         
+        <button class="btn btn-success" onclick="exportarExcel()">
+            Exportar Excel
+        </button>
+
         {% if inventario.status.value == 'Fechado' %}
         <button class="btn btn-warning" onclick="sincronizarEstoque()" id="btnSync">
-            🔄 Sincronizar Estoque
+            Sincronizar Estoque
         </button>
         {% endif %}
       </div>
@@ -58,16 +62,17 @@
         <thead>
           <tr>
             <th>Código</th>
-            <th>Descrição</th>
+            <th>Descrição</th>  
+            <th>ID Máscara</th>   
+            <th>Máscara</th>
             <th class="text-center">Qtd. Estoque</th>
             <th class="text-center">Qtd. Lida</th>
-            <th class="text-center">Diferença</th>
+            <th class="text-center">Dif.</th>
           </tr>
         </thead>
         <tbody id="tbodyComparativo">
           <tr>
-            <td colspan="5"><div class="loading">Carregando dados...</div></td>
-          </tr>
+            <td colspan="7"><div class="loading">Carregando dados...</div></td> </tr>
         </tbody>
       </table>
     </div>

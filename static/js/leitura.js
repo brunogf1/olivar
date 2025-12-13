@@ -1,5 +1,5 @@
 // ========== ESTADO GLOBAL ==========
-const inventarioId = window.location.pathname.split('/')[3];
+const inventarioId = window.location.pathname.split('/')[2];
 let alertTimeout = null; // Para controlar o tempo do alerta no topo
 
 // ========== FUNÇÕES UTILITÁRIAS ==========
@@ -60,7 +60,7 @@ function mostrarScanStatus(tipo) {
 // ========== CARREGAR ITENS SALVOS ==========
 async function carregarItensSalvos() {
   try {
-    const response = await fetch(`/olivar/api/inventarios/${inventarioId}/itens`);
+    const response = await fetch(`/api/inventarios/${inventarioId}/itens`);
     
     if (!response.ok) throw new Error("Falha ao buscar itens");
 
@@ -92,7 +92,7 @@ async function adicionarItem() {
   }
 
   try {
-    const response = await fetch(`/olivar/api/inventarios/${inventarioId}/itens`, {
+    const response = await fetch(`/api/inventarios/${inventarioId}/itens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cod_barra_ord: codigo })
