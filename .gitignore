@@ -3,7 +3,7 @@
 
 *.db
 .config.toml
-
+database.py
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/

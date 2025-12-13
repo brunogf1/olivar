@@ -1,7 +1,9 @@
 import os
 import json
+import pandas as pd 
+from io import BytesIO 
 from flask import (
-    Flask, render_template, request, redirect, url_for, session, flash, jsonify
+    Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 )
 from sqlalchemy import text, func
 from database import Session
@@ -27,14 +29,6 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=False,
 )
-
-# ============ LOG DE INICIALIZAÇÃO ============
-print("="*60)
-print("🚀 INICIANDO OLIVAR (COMPARATIVO: COD + MASCARA)")
-print(f"📂 Diretório: {basedir}")
-print(f"🔗 API BARRAS: {os.getenv('API_CODIGO_BARRAS_URL')}")
-print(f"🔗 API ESTOQUE: {os.getenv('API_ESTOQUE_URL')}")
-print("="*60)
 
 # ============ CONFIGURAÇÕES DE APIS ============
 API_CODIGO_BARRAS_URL = os.getenv("API_CODIGO_BARRAS_URL", "")
@@ -83,7 +77,6 @@ def consultar_codigo_api_individual(cod_barra_busca):
             return None
             
         item = lista_itens[0]
-        # Limpeza e conversão segura
         c_item = str(item.get('cod_item', '')).strip()
         t_id = item.get('tmasc_item_id')
         t_id = int(t_id) if t_id is not None else 0
@@ -224,7 +217,6 @@ def deletar_inventario(inv_id):
         inv = db.query(Inventario).filter_by(id=inv_id).first()
         if not inv: return jsonify({"erro": "Não encontrado"}), 404
         
-        # Apaga itens antes para não dar erro de FK
         db.query(ItemInventario).filter_by(inventario_id=inv_id).delete()
         
         db.delete(inv)
@@ -345,10 +337,6 @@ def comparativo_page(inv_id):
 @app.route("/api/estoque/sincronizar", methods=["POST"])
 @login_required
 def sincronizar_estoque_api():
-    """
-    Consome API Externa (GET) e popula a tabela EstoqueInventario.
-    Limpa a tabela antes de inserir.
-    """
     db = Session()
     try:
         if not API_ESTOQUE_URL:
@@ -360,7 +348,6 @@ def sincronizar_estoque_api():
             "Authorization": f"Bearer {API_TOKEN}",
             "Content-Type": "application/json"
         }
-        # Parâmetros GET conforme solicitado
         params = {"Chave": API_ESTOQUE_CHAVE}
 
         response = requests.get(API_ESTOQUE_URL, headers=headers, params=params, timeout=30)
@@ -370,7 +357,6 @@ def sincronizar_estoque_api():
 
         dados_retorno = response.json()
         
-        # Normalização dos dados
         lista_estoque = []
         if isinstance(dados_retorno, list):
             lista_estoque = dados_retorno
@@ -381,7 +367,6 @@ def sincronizar_estoque_api():
         if not lista_estoque:
              return jsonify({"mensagem": "API retornou lista vazia. Estoque não atualizado."}), 200
 
-        # Transação: Limpar tabela e Inserir novos
         db.query(EstoqueInventario).delete()
         
         novos_registros = []
@@ -416,73 +401,122 @@ def sincronizar_estoque_api():
     finally:
         db.close()
 
+def _calcular_dados_comparativo(db, inv_id):
+    itens_lidos = db.query(
+        ItemInventario.cod_item,
+        ItemInventario.tmasc_item_id,
+        func.max(ItemInventario.desc_tecnica).label('descricao'),
+        func.sum(ItemInventario.quantidade).label('total')
+    ).filter_by(inventario_id=inv_id).group_by(ItemInventario.cod_item, ItemInventario.tmasc_item_id).all()
+
+    dict_lidos = {
+        (item.cod_item, item.tmasc_item_id): {'qtd': item.total, 'desc': item.descricao} 
+        for item in itens_lidos
+    }
+
+    estoque_sistema = db.query(EstoqueInventario).all()
+    dict_sistema = {
+        (e.cod_item, e.id_mascara): {'qtd': e.qtd_almox15, 'desc': e.desc_tecnica, 'mascara': e.mascara}
+        for e in estoque_sistema
+    }
+
+    chaves_lidas = set(dict_lidos.keys())
+    resultado = []
+    
+    for chave in chaves_lidas:
+        cod_item_atual = chave[0]
+        id_mascara_atual = chave[1]
+        
+        dados_lido = dict_lidos.get(chave)
+        dados_sis = dict_sistema.get(chave, {'qtd': 0, 'desc': '', 'mascara': ''})
+
+        qtd_lida = float(dados_lido['qtd'])
+        qtd_sistema = float(dados_sis['qtd'])
+        
+        descricao = dados_sis['desc'] if dados_sis['desc'] else dados_lido['desc']
+        mascara = dados_sis['mascara']
+
+        diferenca = qtd_lida - qtd_sistema
+        
+        if diferenca == 0: status = "ok"
+        elif diferenca < 0: status = "falta"
+        else: status = "sobra"
+
+        resultado.append({
+            "cod_item": cod_item_atual,
+            "id_mascara": id_mascara_atual,
+            "mascara": mascara,
+            "descricao": descricao,
+            "qtd_lida": qtd_lida,
+            "qtd_sistema": qtd_sistema,
+            "diferenca": diferenca,
+            "status": status
+        })
+
+    resultado.sort(key=lambda x: (x['diferenca'] == 0, x['cod_item']))
+    return resultado
+
 @app.route("/api/inventarios/<int:inv_id>/comparativo", methods=["GET"])
 @login_required
 def get_dados_comparativo(inv_id):
-    """
-    Retorna JSON comparativo.
-    FILTRO: Apenas itens lidos.
-    CHAVE: (cod_item + mascara)
-    """
     db = Session()
     try:
-        itens_lidos = db.query(
-            ItemInventario.cod_item,
-            ItemInventario.tmasc_item_id,
-            func.max(ItemInventario.desc_tecnica).label('descricao'),
-            func.sum(ItemInventario.quantidade).label('total')
-        ).filter_by(inventario_id=inv_id).group_by(ItemInventario.cod_item, ItemInventario.tmasc_item_id).all()
-
-        dict_lidos = {
-            (item.cod_item, item.tmasc_item_id): {'qtd': item.total, 'desc': item.descricao} 
-            for item in itens_lidos
-        }
-
-        estoque_sistema = db.query(EstoqueInventario).all()
-        
-        dict_sistema = {
-            (e.cod_item, e.id_mascara): {'qtd': e.qtd_almox15, 'desc': e.desc_tecnica, 'mascara': e.mascara}
-            for e in estoque_sistema
-        }
-
-        chaves_lidas = set(dict_lidos.keys())
-        
-        resultado = []
-        for chave in chaves_lidas:
-            cod_item_atual = chave[0]
-
-            dados_lido = dict_lidos.get(chave)
-            
-            dados_sis = dict_sistema.get(chave, {'qtd': 0, 'desc': '', 'mascara': ''})
-
-            qtd_lida = float(dados_lido['qtd'])
-            qtd_sistema = float(dados_sis['qtd'])
-            
-            descricao = dados_sis['desc'] if dados_sis['desc'] else dados_lido['desc']
-            mascara = dados_sis['mascara']
-
-            diferenca = qtd_lida - qtd_sistema
-            
-            if diferenca == 0: status = "ok"
-            elif diferenca < 0: status = "falta"
-            else: status = "sobra"
-
-            resultado.append({
-                "cod_item": cod_item_atual,
-                "mascara": mascara,
-                "descricao": descricao,
-                "qtd_lida": qtd_lida,
-                "qtd_sistema": qtd_sistema,
-                "diferenca": diferenca,
-                "status": status
-            })
-
-        resultado.sort(key=lambda x: (x['diferenca'] == 0, x['cod_item']))
-
+        resultado = _calcular_dados_comparativo(db, inv_id)
         return jsonify(resultado), 200
-
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
+    finally:
+        db.close()
+
+@app.route("/api/inventarios/<int:inv_id>/comparativo/exportar", methods=["GET"])
+@login_required
+def exportar_comparativo_excel(inv_id):
+    db = Session()
+    try:
+        inv = db.query(Inventario).filter_by(id=inv_id).first()
+        if not inv:
+            return "Inventário não encontrado", 404
+
+        dados = _calcular_dados_comparativo(db, inv_id)
+        
+        if not dados:
+            return "Nenhum dado para exportar", 404
+
+        df = pd.DataFrame(dados)
+        
+        colunas_exportar = {
+            'cod_item': 'Código Item',
+            'id_mascara': 'ID Máscara',
+            'mascara': 'Máscara',
+            'descricao': 'Descrição',
+            'qtd_lida': 'Qtd. Lida',
+            'qtd_sistema': 'Qtd. Sistema',
+            'diferenca': 'Diferença',
+            'status': 'Status'
+        }
+        
+        df = df[list(colunas_exportar.keys())].rename(columns=colunas_exportar)
+
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Comparativo')
+        
+        output.seek(0)
+        
+        nome_seguro = "".join([c for c in inv.nome if c.isalnum() or c in (' ', '-', '_', '.', '(', ')')]).strip()
+        
+        filename = f"comparativo_Inventario_{nome_seguro}.xlsx"
+
+        return send_file(
+            output,
+            download_name=filename,
+            as_attachment=True,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+    except Exception as e:
+        print(f"Erro exportação: {e}")
+        return f"Erro ao gerar Excel: {str(e)}", 500
     finally:
         db.close()
 
